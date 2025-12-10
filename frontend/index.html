@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF分割ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            display: none;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 25px;
+        }
+
+        .result-container.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-title {
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .page-count {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .file-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item-name {
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .btn-download {
+            background: #10b981;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+
+        .btn-download:hover {
+            background: #059669;
+        }
+
+        .btn-download-all {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            margin-top: 15px;
+        }
+
+        .btn-reset {
+            background: #f3f4f6;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .btn-reset:hover {
+            background: #e5e7eb;
+        }
+
+        .error-message {
+            display: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF分割ツール</h1>
+        <p class="subtitle">複数ページのPDFを1ページずつに分割してダウンロード</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <p class="upload-text">ここにPDFをドラッグ&ドロップ</p>
+            <p class="upload-hint">またはクリックしてファイルを選択</p>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf">
+
+        <div class="file-info" id="fileInfo">
+            <div class="file-name" id="fileName"></div>
+            <div class="file-size" id="fileSize"></div>
+        </div>
+
+        <button class="btn btn-primary" id="splitBtn" disabled>
+            分割を開始
+        </button>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">処理中...</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-header">
+                <span class="result-title">分割完了</span>
+                <span class="page-count" id="pageCount"></span>
+            </div>
+            <div class="file-list" id="fileList"></div>
+            <button class="btn btn-download-all" id="downloadAllBtn">
+                すべてダウンロード (ZIP)
+            </button>
+            <button class="btn btn-reset" id="resetBtn">
+                新しいPDFを分割
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const splitBtn = document.getElementById('splitBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultContainer = document.getElementById('resultContainer');
+        const pageCount = document.getElementById('pageCount');
+        const fileList = document.getElementById('fileList');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let selectedFile = null;
+        let currentSessionId = null;
+        let currentZipFilename = null;
+
+        // ファイルサイズをフォーマット
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // ファイル選択処理
+        function handleFileSelect(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showError('PDFファイルのみ対応しています');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            splitBtn.disabled = false;
+            hideError();
+            resultContainer.classList.remove('show');
+        }
+
+        // ドラッグ&ドロップ
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFileSelect(file);
+        });
+
+        // クリックでファイル選択
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFileSelect(file);
+        });
+
+        // エラー表示
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+
+        // 分割処理
+        splitBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            hideError();
+            splitBtn.disabled = true;
+            splitBtn.innerHTML = '<span class="spinner"></span>処理中...';
+            progressContainer.classList.add('show');
+            progressFill.style.width = '30%';
+            progressText.textContent = 'PDFをアップロード中...';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                progressFill.style.width = '60%';
+                progressText.textContent = 'PDFを分割中...';
+
+                const response = await fetch(`${API_BASE}/split`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '分割処理に失敗しました');
+                }
+
+                const result = await response.json();
+                progressFill.style.width = '100%';
+                progressText.textContent = '完了!';
+
+                currentSessionId = result.session_id;
+                currentZipFilename = result.zip_filename;
+
+                // 結果を表示
+                pageCount.textContent = `${result.total_pages}ページ`;
+                fileList.innerHTML = result.files.map(file => `
+                    <div class="file-item">
+                        <span class="file-item-name">${file}</span>
+                        <button class="btn-download" onclick="downloadFile('${file}')">
+                            ダウンロード
+                        </button>
+                    </div>
+                `).join('');
+
+                setTimeout(() => {
+                    progressContainer.classList.remove('show');
+                    resultContainer.classList.add('show');
+                }, 500);
+
+            } catch (error) {
+                showError(error.message);
+                progressContainer.classList.remove('show');
+            } finally {
+                splitBtn.disabled = false;
+                splitBtn.innerHTML = '分割を開始';
+            }
+        });
+
+        // 個別ファイルダウンロード
+        function downloadFile(filename) {
+            if (!currentSessionId) return;
+            const url = `${API_BASE}/download/${currentSessionId}/${filename}`;
+            window.open(url, '_blank');
+        }
+
+        // 全ファイルダウンロード (ZIP)
+        downloadAllBtn.addEventListener('click', () => {
+            if (!currentSessionId || !currentZipFilename) return;
+            const url = `${API_BASE}/download/${currentSessionId}/${currentZipFilename}`;
+            window.open(url, '_blank');
+        });
+
+        // リセット
+        resetBtn.addEventListener('click', async () => {
+            // クリーンアップ
+            if (currentSessionId) {
+                try {
+                    await fetch(`${API_BASE}/cleanup/${currentSessionId}`, {
+                        method: 'DELETE'
+                    });
+                } catch (e) {
+                    // 無視
+                }
+            }
+
+            selectedFile = null;
+            currentSessionId = null;
+            currentZipFilename = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            resultContainer.classList.remove('show');
+            progressContainer.classList.remove('show');
+            splitBtn.disabled = true;
+            hideError();
+        });
+    </script>
+</body>
+</html>
